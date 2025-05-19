@@ -51,7 +51,7 @@ export interface ReveAIOptions {
    * @default 2000
    */
   pollingInterval?: number;
-  
+
   /**
    * Enable verbose logging of requests and responses
    * @default false
@@ -103,7 +103,7 @@ export interface GenerateImageOptions {
    * @default 1
    */
   batchSize?: number;
-  
+
   /**
    * Model to use for generation
    * @default "text2image_v1/prod/20250325-2246"
@@ -190,11 +190,106 @@ export enum ReveAIErrorType {
 export class ReveAIError extends Error {
   type: ReveAIErrorType;
   statusCode?: number;
-  
-  constructor(message: string, type: ReveAIErrorType = ReveAIErrorType.UNKNOWN_ERROR, statusCode?: number) {
+
+  constructor(
+    message: string,
+    type: ReveAIErrorType = ReveAIErrorType.UNKNOWN_ERROR,
+    statusCode?: number
+  ) {
     super(message);
     this.name = 'ReveAIError';
     this.type = type;
     this.statusCode = statusCode;
   }
-} 
+}
+
+/**
+ * Options for generating an image from a reference image (image-to-image)
+ */
+export interface GenerateImageFromImageOptions {
+  /**
+   * The prompt to guide the generation
+   */
+  prompt: string;
+
+  /**
+   * Reference image as a Buffer, base64 string, or file path
+   */
+  image: Buffer | string;
+
+  /**
+   * Negative prompt to exclude certain features from the image
+   */
+  negativePrompt?: string;
+
+  /**
+   * Width of the output image
+   * @default 1024
+   */
+  width?: number;
+
+  /**
+   * Height of the output image
+   * @default 1024
+   */
+  height?: number;
+
+  /**
+   * Seed for reproducible generations
+   * Set to -1 for random seed
+   * @default -1
+   */
+  seed?: number;
+
+  /**
+   * Number of images to generate
+   * @default 1
+   */
+  batchSize?: number;
+
+  /**
+   * Model to use for generation
+   * @default "llm_claude_sonnet_3_5_v2"
+   */
+  model?: string;
+
+  /**
+   * Extra text for the API (optional)
+   */
+  extraText?: string;
+
+  /**
+   * Client metadata (optional)
+   */
+  clientMetadata?: Record<string, any>;
+}
+
+/**
+ * Result of an image-to-image generation
+ */
+export interface GenerateImageFromImageResult {
+  /**
+   * Array of URLs to the generated images
+   */
+  imageUrls: string[];
+
+  /**
+   * The seed that was used for generation
+   */
+  seed: number;
+
+  /**
+   * Timestamp when the generation was completed
+   */
+  completedAt: Date;
+
+  /**
+   * The original prompt used for generation
+   */
+  prompt: string;
+
+  /**
+   * Any negative prompt used for generation
+   */
+  negativePrompt?: string;
+}
