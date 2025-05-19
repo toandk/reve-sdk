@@ -63,35 +63,93 @@ async function generateImage() {
       model: 'text2image_v1/prod/20250325-2246', // Default model
       enhancePrompt: true, // Whether to enhance the prompt automatically
     });
-    
+
     // Access generated image URLs
     console.log('Images generated:', result.imageUrls);
     console.log('Seed used:', result.seed);
     console.log('Completed at:', result.completedAt);
     console.log('Prompt:', result.prompt);
     console.log('Enhanced Prompt:', result.enhancedPrompt);
-    
+
     // Save the images to files
     result.imageUrls.forEach((base64Data, index) => {
       // Extract the base64 data (removing the data URL prefix if present)
-      const base64Image = base64Data.includes('base64,') 
-        ? base64Data.split('base64,')[1] 
+      const base64Image = base64Data.includes('base64,')
+        ? base64Data.split('base64,')[1]
         : base64Data;
-      
+
       // Convert base64 to binary
       const imageBuffer = Buffer.from(base64Image, 'base64');
-      
+
       // Save to file
       const fs = require('fs');
       fs.writeFileSync(`image_${index}.webp`, imageBuffer);
     });
-    
   } catch (error) {
     console.error('Error generating image:', error);
   }
 }
 
 generateImage();
+```
+
+### Generate an image from a reference image (image-to-image, base64)
+
+You can generate a new image using a reference image (image-to-image) by providing a base64-encoded image as input. This is useful for style transfer, variations, or guided generations.
+
+```typescript
+import { ReveAI } from 'reve-sdk';
+import * as fs from 'fs';
+
+// Read a reference image and convert it to base64 (as data URL)
+const referenceImagePath = 'reference.png'; // Path to your reference image
+const imageBuffer = fs.readFileSync(referenceImagePath);
+const base64Image = `data:image/png;base64,${imageBuffer.toString('base64')}`;
+
+const reveAI = new ReveAI({
+  auth: {
+    authorization: 'Bearer your-jwt-token-here',
+    cookie: 'your-cookie-value-here',
+  },
+  projectId: 'your-project-id-here',
+  verbose: true,
+});
+
+async function generateImageFromReference() {
+  try {
+    const result = await reveAI.generateImageFromImage({
+      prompt: 'A futuristic city skyline at sunset, digital art',
+      image: base64Image, // Pass the base64-encoded reference image
+      width: 1024,
+      height: 768,
+      batchSize: 1,
+      negativePrompt: 'blurry, low quality',
+      // model: 'llm_claude_sonnet_3_5_v2', // Optional: specify model
+    });
+
+    // Access generated image URLs
+    console.log('Images generated:', result.imageUrls);
+    console.log('Seed used:', result.seed);
+    console.log('Completed at:', result.completedAt);
+    console.log('Prompt:', result.prompt);
+    if (result.negativePrompt) {
+      console.log('Negative Prompt:', result.negativePrompt);
+    }
+
+    // Save the images to files
+    result.imageUrls.forEach((base64Data, index) => {
+      const base64Image = base64Data.includes('base64,')
+        ? base64Data.split('base64,')[1]
+        : base64Data;
+      const imageBuffer = Buffer.from(base64Image, 'base64');
+      fs.writeFileSync(`image_from_reference_${index}.webp`, imageBuffer);
+    });
+  } catch (error) {
+    console.error('Error generating image from reference:', error);
+  }
+}
+
+generateImageFromReference();
 ```
 
 ## How to get authentication values
@@ -113,11 +171,12 @@ If you encounter issues with the SDK, you can enable verbose logging by setting 
 ```typescript
 const reveAI = new ReveAI({
   // ...other options
-  verbose: true
+  verbose: true,
 });
 ```
 
 This will log detailed information about:
+
 - All HTTP requests (URL, method, headers, request body)
 - All HTTP responses (status code, headers, response body)
 - Detailed error information with request/response context
@@ -140,18 +199,18 @@ const reveAI = new ReveAI(options);
 
 Options:
 
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| auth | object | Yes | - | Authentication credentials |
-| auth.authorization | string | Yes | - | Authorization header with Bearer token |
-| auth.cookie | string | Yes | - | Cookie value for authentication |
-| projectId | string | No | - | Project ID to use for generations. If not provided, the SDK will try to auto-detect |
-| baseUrl | string | No | 'https://preview.reve.art' | Reve AI API base URL |
-| timeout | number | No | 30000 | Request timeout in milliseconds |
-| maxPollingAttempts | number | No | 60 | Maximum number of status check attempts |
-| pollingInterval | number | No | 2000 | Interval between status checks in milliseconds |
-| verbose | boolean | No | false | Enable verbose logging for debugging |
-| customHeaders | object | No | {} | Custom headers to add to every request |
+| Parameter          | Type    | Required | Default                    | Description                                                                         |
+| ------------------ | ------- | -------- | -------------------------- | ----------------------------------------------------------------------------------- |
+| auth               | object  | Yes      | -                          | Authentication credentials                                                          |
+| auth.authorization | string  | Yes      | -                          | Authorization header with Bearer token                                              |
+| auth.cookie        | string  | Yes      | -                          | Cookie value for authentication                                                     |
+| projectId          | string  | No       | -                          | Project ID to use for generations. If not provided, the SDK will try to auto-detect |
+| baseUrl            | string  | No       | 'https://preview.reve.art' | Reve AI API base URL                                                                |
+| timeout            | number  | No       | 30000                      | Request timeout in milliseconds                                                     |
+| maxPollingAttempts | number  | No       | 60                         | Maximum number of status check attempts                                             |
+| pollingInterval    | number  | No       | 2000                       | Interval between status checks in milliseconds                                      |
+| verbose            | boolean | No       | false                      | Enable verbose logging for debugging                                                |
+| customHeaders      | object  | No       | {}                         | Custom headers to add to every request                                              |
 
 #### Methods
 
@@ -165,16 +224,16 @@ const result = await reveAI.generateImage(options);
 
 Options:
 
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| prompt | string | Yes | - | Text prompt describing the image to generate |
-| negativePrompt | string | No | '' | Text prompt describing what to exclude from the image |
-| width | number | No | 1024 | Image width in pixels (384-1024, divisible by 8) |
-| height | number | No | 1024 | Image height in pixels (384-1024, divisible by 8) |
-| batchSize | number | No | 1 | Number of images to generate (1-4) |
-| seed | number | No | -1 | Random seed (-1 for random) |
-| model | string | No | 'text2image_v1/prod/20250325-2246' | Model name to use for generation |
-| enhancePrompt | boolean | No | true | Whether to enhance the prompt automatically using Reve AI's prompt enhancement model |
+| Parameter      | Type    | Required | Default                            | Description                                                                          |
+| -------------- | ------- | -------- | ---------------------------------- | ------------------------------------------------------------------------------------ |
+| prompt         | string  | Yes      | -                                  | Text prompt describing the image to generate                                         |
+| negativePrompt | string  | No       | ''                                 | Text prompt describing what to exclude from the image                                |
+| width          | number  | No       | 1024                               | Image width in pixels (384-1024, divisible by 8)                                     |
+| height         | number  | No       | 1024                               | Image height in pixels (384-1024, divisible by 8)                                    |
+| batchSize      | number  | No       | 1                                  | Number of images to generate (1-4)                                                   |
+| seed           | number  | No       | -1                                 | Random seed (-1 for random)                                                          |
+| model          | string  | No       | 'text2image_v1/prod/20250325-2246' | Model name to use for generation                                                     |
+| enhancePrompt  | boolean | No       | true                               | Whether to enhance the prompt automatically using Reve AI's prompt enhancement model |
 
 Return value:
 
@@ -196,9 +255,10 @@ When `enhancePrompt` is set to `true` (default), the SDK will send your prompt t
 
 For example, a simple prompt like "a superhero advertising Red Bull" might be enhanced to include details about composition, lighting, style, and more specific visual elements.
 
-The enhanced prompt is available in the `enhancedPrompt` property of the result object. 
+The enhanced prompt is available in the `enhancedPrompt` property of the result object.
 
 When generating multiple images in a batch (using `batchSize` > 1), the SDK will:
+
 1. Request multiple prompt variants from the enhancement model (equal to your batch size)
 2. Use a different enhanced prompt for each image in the batch
 3. Return all the enhanced prompts used in the `enhancedPrompts` array
@@ -208,8 +268,8 @@ This ensures maximum variation between the generated images in a batch, as each 
 ```typescript
 // Generate 4 images with different enhanced prompts
 const result = await reveAI.generateImage({
-  prompt: "a superhero advertising Red Bull",
-  batchSize: 4
+  prompt: 'a superhero advertising Red Bull',
+  batchSize: 4,
 });
 
 // Access all enhanced prompts used
@@ -235,6 +295,7 @@ try {
 ```
 
 Error types:
+
 - `AUTHENTICATION_ERROR` - Issues with authentication
 - `API_ERROR` - Server returned an error response
 - `REQUEST_ERROR` - Network or request formation problems
