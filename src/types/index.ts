@@ -286,7 +286,7 @@ export interface GenerateImageFromImageResult {
   /**
    * The original prompt used for generation
    */
-  prompt: string;
+  prompt?: string;
 
   /**
    * Any negative prompt used for generation
