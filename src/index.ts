@@ -1,8 +1,6 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
 import axiosRetry from 'axios-retry';
 import FormData from 'form-data';
-import fs from 'fs';
-import path from 'path';
 import {
   ReveAIOptions,
   GenerateImageOptions,
@@ -668,7 +666,7 @@ export class ReveAI {
 
       // Prepare image data for form-data
       let imageBuffer: Buffer;
-      let imageFilename = 'image.png';
+      const imageFilename = 'image.png';
       if (Buffer.isBuffer(image)) {
         imageBuffer = image;
       } else if (typeof image === 'string') {
@@ -676,10 +674,6 @@ export class ReveAI {
           // base64 data URL
           const base64 = image.split(',')[1];
           imageBuffer = Buffer.from(base64, 'base64');
-        } else if (fs.existsSync(image)) {
-          // file path
-          imageBuffer = fs.readFileSync(image);
-          imageFilename = path.basename(image);
         } else {
           throw new ReveAIError(
             'Invalid image string: must be a file path or base64 data URL',
