@@ -213,9 +213,9 @@ export interface GenerateImageFromImageOptions {
   prompt?: string;
 
   /**
-   * Reference image as a Buffer, base64 string, or file path
+   * Reference image as a base64 data URL string (must start with "data:")
    */
-  image: Buffer | string;
+  image: string;
 
   /**
    * Negative prompt to exclude certain features from the image

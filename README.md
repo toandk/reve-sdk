@@ -152,6 +152,49 @@ async function generateImageFromReference() {
 generateImageFromReference();
 ```
 
+## Image-to-Image Example
+
+You can generate images based on a reference image using the `generateImageFromImage` method:
+
+```typescript
+// Using a base64 data URL
+const dataUrl = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...'; // base64 image data
+const result = await reveAI.generateImageFromImage({
+  prompt: 'Transform this image into a watercolor painting',
+  image: dataUrl,
+  negativePrompt: 'blurry, low quality',
+  width: 1024,
+  height: 1024,
+  batchSize: 1,
+});
+
+// The result contains an array of image URLs
+console.log(result.imageUrls); // Array of generated image URLs
+console.log(result.seed); // Seed used for generation
+```
+
+> Note: The `image` parameter must be a base64 data URL string starting with "data:".
+
+### Converting a File to Base64 (Browser)
+
+If you have a file from an input element, you can convert it to base64:
+
+```typescript
+const fileInput = document.querySelector('input[type="file"]');
+const file = fileInput.files[0];
+
+const reader = new FileReader();
+reader.onload = async (e) => {
+  const dataUrl = e.target.result as string;
+  const result = await reveAI.generateImageFromImage({
+    prompt: 'Transform this image into a watercolor painting',
+    image: dataUrl,
+  });
+  console.log(result.imageUrls);
+};
+reader.readAsDataURL(file);
+```
+
 ## How to get authentication values
 
 To get the authorization token and cookie values:

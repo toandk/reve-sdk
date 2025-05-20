@@ -1,6 +1,7 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
 import axiosRetry from 'axios-retry';
 import FormData from 'form-data';
+// Import fs only in Node.js environment, not in browsers
 import {
   ReveAIOptions,
   GenerateImageOptions,
@@ -655,8 +656,6 @@ export class ReveAI {
         prompt,
         image,
         negativePrompt = '',
-        width = 1024,
-        height = 1024,
         seed = -1,
         batchSize = 1,
         model = 'llm_claude_sonnet_3_5_v2',
@@ -664,25 +663,24 @@ export class ReveAI {
         clientMetadata = {},
       } = options;
 
-      // Prepare image data for form-data
-      let imageBuffer: Buffer;
+      // Prepare image data for form-data - only supporting base64 data URLs
+      let imageData: Buffer;
       const imageFilename = 'image.png';
-      if (Buffer.isBuffer(image)) {
-        imageBuffer = image;
-      } else if (typeof image === 'string') {
-        if (image.startsWith('data:')) {
-          // base64 data URL
-          const base64 = image.split(',')[1];
-          imageBuffer = Buffer.from(base64, 'base64');
-        } else {
+
+      if (typeof image === 'string' && image.startsWith('data:')) {
+        // Handle base64 data URL
+        const matches = image.match(/^data:([A-Za-z-+/]+);base64,(.+)$/);
+        if (!matches || matches.length !== 3) {
           throw new ReveAIError(
-            'Invalid image string: must be a file path or base64 data URL',
+            'Invalid base64 data URL format. Must be in format: data:image/png;base64,BASE64DATA',
             ReveAIErrorType.REQUEST_ERROR
           );
         }
+        const base64Data = matches[2];
+        imageData = Buffer.from(base64Data, 'base64');
       } else {
         throw new ReveAIError(
-          'Invalid image type: must be Buffer, base64 string, or file path',
+          'Image must be provided as a base64 data URL string (starting with "data:")',
           ReveAIErrorType.REQUEST_ERROR
         );
       }
@@ -703,7 +701,17 @@ export class ReveAI {
       // Build form-data
       const form = new FormData();
       form.append('project_id', projectId);
-      form.append('image', imageBuffer, { filename: imageFilename, contentType: 'image/png' });
+
+      // Attach image with appropriate options
+      try {
+        form.append('image', imageData, { filename: imageFilename, contentType: 'image/png' });
+      } catch (formError) {
+        throw new ReveAIError(
+          `Failed to attach image to form data: ${(formError as Error).message}. Make sure the image is a valid base64 data URL.`,
+          ReveAIErrorType.REQUEST_ERROR
+        );
+      }
+
       form.append('model', model);
       form.append('num_generations', batchSize.toString());
       form.append('extratext', extraText);
@@ -711,8 +719,6 @@ export class ReveAI {
       // Optionally add prompt/negativePrompt/width/height/seed if API supports
       form.append('prompt', prompt);
       if (negativePrompt) form.append('negative_prompt', negativePrompt);
-      if (width) form.append('width', width.toString());
-      if (height) form.append('height', height.toString());
       if (seed !== undefined) form.append('seed', seed.toString());
 
       // Send request
