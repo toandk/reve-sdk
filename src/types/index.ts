@@ -210,7 +210,7 @@ export interface GenerateImageFromImageOptions {
   /**
    * The prompt to guide the generation
    */
-  prompt: string;
+  prompt?: string;
 
   /**
    * Reference image as a Buffer, base64 string, or file path
